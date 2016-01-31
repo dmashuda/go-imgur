@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -14,11 +13,11 @@ type imgurClient struct {
 	clientId        string
 	baseUrl         string
 	httpClient      *http.Client
-	userLimit       int
-	userRemaining   int
-	userReset       time.Time
-	clientLimit     int
-	clientRemaining int
+	UserLimit       int
+	UserRemaining   int
+	UserReset       time.Time
+	ClientLimit     int
+	ClientRemaining int
 }
 
 type Comment struct {
@@ -81,7 +80,7 @@ func NewClient(clientId string) imgurClient {
 	return iClient
 }
 
-func (c imgurClient) get(url string, params map[string]string, r io.Reader) (*http.Response, error) {
+func (c *imgurClient) get(url string, params map[string]string, r io.Reader) (*http.Response, error) {
 	request, err := http.NewRequest("GET", c.baseUrl+url, r)
 	request.Header.Add("Authorization", "Client-ID "+c.clientId)
 	if err != nil {
@@ -95,16 +94,17 @@ func (c imgurClient) get(url string, params map[string]string, r io.Reader) (*ht
 	request.URL.RawQuery = values.Encode()
 	resp, err := c.httpClient.Do(request)
 
-	c.userLimit = strconv.Atoi(resp.Header.Get("X-RateLimit-UserLimit"))
-	c.userRemaining = strconv.Atoi(resp.Header.Get("X-RateLimit-UserRemaining"))
-	c.userReset = strconv.Atoi(resp.Header.Get("X-RateLimit-UserReset"))
-	c.clientLimit, _ = time.Parse(time.UnixDate, resp.Header.Get("X-RateLimit-ClientLimit"))
-	c.clientRemaining = strconv.Atoi(resp.Header.Get("X-RateLimit-ClientRemaining"))
-	log.Println(c)
+	c.UserLimit, _ = strconv.Atoi(resp.Header.Get("X-RateLimit-UserLimit"))
+	c.UserRemaining, _ = strconv.Atoi(resp.Header.Get("X-RateLimit-UserRemaining"))
+	userResetInt, _ := strconv.ParseInt(resp.Header.Get("X-RateLimit-UserReset"), 10, 64)
+	c.ClientLimit, _ = strconv.Atoi(resp.Header.Get("X-RateLimit-ClientLimit"))
+	c.ClientRemaining, _ = strconv.Atoi(resp.Header.Get("X-RateLimit-ClientRemaining"))
+
+	c.UserReset = time.Unix(userResetInt, 0)
 	return resp, err
 }
 
-func (c imgurClient) GetAlbum(url string, page, perPage int) ([]Image, error) {
+func (c *imgurClient) GetAlbum(url string, page, perPage int) ([]Image, error) {
 	images := struct {
 		Data    []Image `json:"data"`
 		Success bool    `json:"success"`
