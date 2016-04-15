@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+	"errors"
 )
 
 type imgurClient struct {
@@ -121,9 +122,15 @@ func (c *imgurClient) GetAlbum(url string, page, perPage int) ([]Image, error) {
 	if err != nil {
 		return images.Data, err
 	}
+
+
 	respBytes, readErr := ioutil.ReadAll(resp.Body)
 
-	if err != readErr {
+	if resp.StatusCode != 200 {
+		return  images.Data, errors.New(string(respBytes))
+	}
+
+	if readErr != nil {
 		return images.Data, readErr
 	}
 	marshalErr := json.Unmarshal(respBytes, &images)
